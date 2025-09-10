@@ -1,13 +1,14 @@
 import sys
 import os
 from PyQt6 import QtWidgets, QtGui
-from PyQt6.QtCore import Qt
-from heatmap_widget import HeatmapWidget
+# from PyQt6.QtCore import Qt
+# from heatmap_widget import HeatmapWidget
 from heatmap_display import HeatmapDisplay
-from heatmap_interpolation import HeatmapInterpolation
+# from heatmap_interpolation import HeatmapInterpolation
 from control_panel import ControlPanel
 from threshold_slider import ThresholdSliderBar
 from record_manager import RecordManager
+# import numpy as np
 
 from config import MAT_WIDTH, MAT_HEIGHT, THRESHOLDS, COLORS
 
@@ -45,20 +46,25 @@ class MainApp(QtWidgets.QMainWindow):
         self.control_panel.new_frame.connect(self.handle_data)
 
         self.record_manager = RecordManager()
+        self.record_manager.new_frame.connect(self.handle_data)
+
+        self.control_panel.toggle_record.connect(self.record_manager.set_record_button)
+        self.control_panel.cop_on_emitter.connect(self.heatmap.set_cop)        
 
         central_widget = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(central_widget)
         layout.addWidget(self.heatmap, 4)
         layout.addWidget(self.control_panel, 1)
-        # layout.addWidget(self.record_manager, 1)
+        layout.addWidget(self.record_manager, 1)
         layout.addWidget(self.threshold_bar, 2)
         self.setCentralWidget(central_widget)
 
     def handle_data(self, data):
         # np.set_printoptions(threshold=np.inf, linewidth=np.inf)
         # print(data)
+        
         if self.record_manager.is_replaying:
-            self.heatmap.update(self.record_manager.replay_frame)
+            self.heatmap.update_image(self.record_manager.replay_frame)
         elif self.record_manager.is_recording:
             self.heatmap.update_image(data)
             self.record_manager.recorded_frames.append(data)

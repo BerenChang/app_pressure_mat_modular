@@ -59,6 +59,9 @@ class HeatmapDisplay(QWidget):
         self.thresholds = THRESHOLDS
         self.colors = COLORS
 
+    def set_cop(self, state: bool):
+        self.cop_on = state
+
     def set_background(self, pixmap):
         self.background_pixmap = pixmap
         self.update()
@@ -243,10 +246,6 @@ class HeatmapDisplay(QWidget):
                 painter.setBrush(QColor(255, 0, 0))
                 # painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawEllipse(QPointF(x, y), 6, 6)
-
-
-
-
 
         painter.end()
 

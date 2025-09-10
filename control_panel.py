@@ -8,6 +8,8 @@ from config import SERIAL_PORT, BAUD_RATE, MAT_WIDTH, MAT_HEIGHT
 
 class ControlPanel(QWidget):
     new_frame = QtCore.pyqtSignal(np.ndarray)
+    toggle_record = QtCore.pyqtSignal(bool)
+    cop_on_emitter = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -29,7 +31,6 @@ class ControlPanel(QWidget):
         self.is_reading = False
         self.cop_on = True
 
-
         self.refresh_button = QPushButton("🔄")
         self.refresh_button.setFixedSize(30, 24)
         self.refresh_button.clicked.connect(self.refresh_ports)
@@ -40,8 +41,11 @@ class ControlPanel(QWidget):
         self.start_button = QPushButton('Start Reading')
         self.start_button.clicked.connect(self.toggle_reading)
 
-        self.cop_button = QPushButton('CoP OFF')
+        self.cop_button = QPushButton('CoP ON')
         self.cop_button.clicked.connect(self.toggle_cop)
+
+        self.start_button.setEnabled(False)
+        self.cop_button.setEnabled(False)
 
         layout = QGridLayout()
         self.setLayout(layout)
@@ -54,15 +58,6 @@ class ControlPanel(QWidget):
         # layout.addWidget(self.calibration_button, 0, 4)
         # layout.setContentsMargins(330, 1, 330, 1)  # (left, top, right, bottom)
 
-        # self.start_button = QPushButton('Start')
-        # self.start_button.clicked.connect(self.toggle_reading)
-        # self.start_button.clicked.connect(self.start_reading)
-        # self.stop_button = QPushButton('Stop')
-        # self.stop_button.clicked.connect(self.stop_reading)
-
-        # layout.addWidget(self.start_button, 1, 1)
-        # layout.addWidget(self.stop_button, 1, 2)
-        
 
     def refresh_ports(self):
         ports = [p.device for p in list_ports.comports()]
@@ -92,11 +87,14 @@ class ControlPanel(QWidget):
 
         # Start reader
         self.reader = SerialReader(SERIAL_PORT, BAUD_RATE)
-        self.reader.new_frame.connect(self.new_frame.emit)
+        # self.reader.new_frame.connect(self.new_frame.emit)
 
         # Disable dropdown after connection
         self.port_dropdown.setEnabled(False)
         self.connect_button.setEnabled(False)
+
+        self.start_button.setEnabled(True)
+        self.cop_button.setEnabled(True)
 
     def calibration(self):
         for i in range(10):
@@ -109,27 +107,39 @@ class ControlPanel(QWidget):
         print(self.offset)
         self.reader.offset = self.offset
 
+    def forward_frame(self, frame):
+        self.new_frame.emit(frame)
+
     def toggle_reading(self):
         if self.is_reading:
             self.is_reading = False
             self.start_button.setText("Start")
-            self.stop_reading()
+            self.toggle_record.emit(False)
+            self.reader.new_frame.disconnect(self.forward_frame)
+            self.reader.stop()
         else:
             self.is_reading = True
             self.start_button.setText("Pause Reading")
-            self.start_reading()
+            self.toggle_record.emit(True)
+            self.reader.new_frame.connect(self.forward_frame)
+            self.frames.clear()
+            self.reader.start()
 
-    def start_reading(self):
-        self.frames.clear()
-        self.reader.start()
+    # def start_reading(self):
+    #     self.reader.new_frame.connect(self.new_frame.emit)
+    #     self.frames.clear()
+    #     self.reader.start()
 
-    def stop_reading(self):
-        self.reader.stop()
+    # def stop_reading(self):
+    #     self.reader.new_frame.disconnect(self.new_frame.emit)
+    #     self.reader.stop()
 
     def toggle_cop(self):
         if self.cop_on:
             self.cop_on = False
+            self.cop_on_emitter.emit(False)
             self.cop_button.setText("CoP OFF")
         else:
             self.cop_on = True
+            self.cop_on_emitter.emit(True)
             self.cop_button.setText("CoP ON")
